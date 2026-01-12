@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronologia Biblica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        
+        :root {
+            --bg-pergamena: #f4f1ea;
+            --line-color: #3b82f6;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-pergamena);
+            color: #2d241e;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Tutto gestito via React */
+            cursor: grab;
+        }
+        
+        body:active {
+            cursor: grabbing;
+        }
+
+        .serif-title { font-family: 'Cinzel', serif; }
+        .serif-body { font-family: 'Lora', serif; }
+
+        .viewport {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .canvas {
+            position: absolute;
+            transform-origin: 0 0;
+            will-change: transform;
+            transition: transform 0.1s ease-out;
+        }
+
+        .timeline-axis {
+            position: absolute;
+            height: 8px;
+            background-color: var(--line-color);
+            top: 50%;
+            left: 0;
+            border-radius: 4px;
+        }
+
+        .timeline-axis::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: -11px;
+            border-left: 30px solid var(--line-color);
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+        }
+
+        .node-label {
+            position: absolute;
+            width: 250px;
+            text-align: center;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+        }
+
+        .node-label.book {
+            background: #f97316;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .node-label.event {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .connector-line {
+            position: absolute;
+            width: 2px;
+            background: rgba(0,0,0,0.2);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .year-marker {
+            position: absolute;
+            top: 40px;
+            font-weight: 800;
+            font-size: 2rem;
+            color: #1e3a8a;
+            opacity: 0.15;
+            pointer-events: none;
+            serif-title;
+        }
+
+        /* Overlay UI */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .btn-control {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            color: #1e3a8a;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-control:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
