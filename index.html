@@ -196,4 +196,101 @@
                 if (!isDragging.current) return;
                 setTransform(p => ({ 
                     ...p, 
-                    x: p.x + (e.clientX - lastMousePos.current
+                    x: p.x + (e.clientX - lastMousePos.current.x), 
+                    y: p.y + (e.clientY - lastMousePos.current.y) 
+                }));
+                lastMousePos.current = { x: e.clientX, y: e.clientY };
+            };
+
+            return (
+                <div className="viewport" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={()=>isDragging.current=false}>
+                    
+                    <header className="fixed top-0 left-0 z-[1000] p-6 pointer-events-none">
+                        <div className="bg-white/80 backdrop-blur shadow-2xl p-6 rounded-3xl border-2 border-amber-200 pointer-events-auto">
+                            <h1 className="text-4xl font-bold serif-title text-amber-900 uppercase">Cronologia Biblica</h1>
+                            <p className="text-xs tracking-widest font-bold text-amber-600 uppercase mt-1">Interattiva</p>
+                        </div>
+                    </header>
+
+                    <div style={{ 
+                        position: 'absolute', 
+                        transform: `translate(${transform.x}px, ${window.innerHeight/2 + transform.y}px) scale(${transform.scale})`,
+                        transformOrigin: '0 0'
+                    }}>
+                        {/* Linea temporale centrale */}
+                        <div className="absolute h-16 bg-gradient-to-r from-amber-700 via-amber-500 to-amber-800 rounded-full shadow-2xl" 
+                             style={{ width: 100000, top: -8, left: -2000, zIndex: 100 }} />
+
+                        {/* Griglia Anni */}
+                        {sortedYears.filter(y => y % 100 === 0).map(y => (
+                            <div key={y} className="absolute flex flex-col items-center" style={{ left: xMap(y), top: 50 }}>
+                                <div className="w-1 h-12 bg-amber-400 rounded-full mb-4" />
+                                <div className="bg-white/90 p-4 rounded-2xl border-2 border-amber-100 shadow-xl">
+                                    <span className="text-6xl font-black serif-title text-amber-800">{Math.abs(y)}</span>
+                                    <div className="text-xl font-bold text-amber-500 text-center uppercase">{y < 0 ? 'a.E.V.' : 'E.V.'}</div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Personaggi */}
+                        {personaggi.map((p, i) => {
+                            const sx = xMap(p.nascita);
+                            const ex = xMap(p.morte);
+                            const y = 250 + (i % 12 * 90);
+                            return (
+                                <div key={p.nome+i} onClick={()=>setSelectedPerson(p)}
+                                     className="absolute h-20 rounded-full border-4 border-white shadow-xl cursor-pointer hover:scale-105 transition-transform"
+                                     style={{ left: sx, top: y, width: Math.max(ex-sx, 250), backgroundColor: p.color, zIndex: 50 }}>
+                                    <div className="flex items-center h-full px-6" style={{ transform: `translateX(${getStickyX(sx, ex, p.nome)}px)` }}>
+                                        <i className={`fa-solid ${getIcon(p.cat)} text-white text-2xl mr-4`} />
+                                        <span className="text-white text-2xl font-bold serif-title uppercase whitespace-nowrap">{p.nome}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Eventi e Libri */}
+                        {processedEvents.map(ev => (
+                            <div key={ev.id} className="absolute" style={{ left: ev.x, top: ev.y, zIndex: 110 }}>
+                                <div className="connector-line bg-amber-300" style={{ 
+                                    width: ev.tipo === 'libro' ? 8 : 4,
+                                    height: Math.abs(ev.y),
+                                    top: ev.y < 0 ? '100%' : 'auto',
+                                    bottom: ev.y > 0 ? '100%' : 'auto'
+                                }} />
+                                <div className={`p-8 rounded-[2.5rem] shadow-2xl border-4 transform -translate-x-1/2 ${ev.tipo === 'libro' ? 'bg-amber-800 text-amber-50 border-amber-400 w-[450px]' : 'bg-white text-amber-950 border-amber-100 w-[350px]'}`}>
+                                    <div className="text-sm font-black text-amber-400 uppercase tracking-widest mb-2">{ev.data} {ev.era}</div>
+                                    <div className="text-3xl font-bold serif-title leading-tight">{ev.avvenimento}</div>
+                                    {ev.autore && <div className="mt-4 text-lg italic border-t border-amber-600/30 pt-4"><i className="fa-solid fa-pen-nib mr-2"/>{ev.autore}</div>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Modal Personaggio */}
+                    {selectedPerson && (
+                        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-amber-950/40 backdrop-blur-xl" onClick={()=>setSelectedPerson(null)}>
+                            <div className="bg-[#fdfaf3] max-w-2xl w-full rounded-[4rem] p-12 shadow-full animate-in border-8 border-amber-200" onClick={e=>e.stopPropagation()}>
+                                <div className="text-center">
+                                    <div className="w-32 h-32 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6 text-6xl text-amber-700 shadow-inner">
+                                        <i className={`fa-solid ${getIcon(selectedPerson.cat)}`} />
+                                    </div>
+                                    <h2 className="text-6xl font-bold serif-title text-amber-900">{selectedPerson.nome}</h2>
+                                    <p className="text-amber-600 font-black uppercase tracking-widest mt-2 mb-8">{selectedPerson.cat}</p>
+                                    <div className="bg-white p-8 rounded-3xl shadow-inner italic text-3xl serif-body text-amber-950">
+                                        "{selectedPerson.desc}"
+                                    </div>
+                                    <button onClick={()=>setSelectedPerson(null)} className="mt-10 w-full bg-amber-800 text-white py-6 rounded-full text-2xl font-bold shadow-lg">CHIUDI</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
