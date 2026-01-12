@@ -1,155 +1,199 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cronologia Biblica</title>
+    <title>Cronologia Biblica Interattiva</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Fauna+One&display=swap');
         
-        :root {
-            --bg-pergamena: #f4f1ea;
-            --line-color: #3b82f6;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-pergamena);
-            color: #2d241e;
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* Tutto gestito via React */
-            cursor: grab;
-        }
-        
-        body:active {
-            cursor: grabbing;
-        }
-
         .serif-title { font-family: 'Cinzel', serif; }
-        .serif-body { font-family: 'Lora', serif; }
+        .serif-body { font-family: 'Fauna One', serif; }
+        
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fdfaf3; }
+        .viewport { width: 100vw; height: 100vh; position: relative; cursor: grab; }
+        .viewport:active { cursor: grabbing; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .connector-line { position: absolute; left: 50%; transform: translateX(-50%); z-index: 10; }
 
-        .viewport {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .canvas {
-            position: absolute;
-            transform-origin: 0 0;
-            will-change: transform;
-            transition: transform 0.1s ease-out;
-        }
-
-        .timeline-axis {
-            position: absolute;
-            height: 8px;
-            background-color: var(--line-color);
-            top: 50%;
-            left: 0;
-            border-radius: 4px;
-        }
-
-        .timeline-axis::after {
-            content: '';
-            position: absolute;
-            right: -20px;
-            top: -11px;
-            border-left: 30px solid var(--line-color);
-            border-top: 15px solid transparent;
-            border-bottom: 15px solid transparent;
-        }
-
-        .node-label {
-            position: absolute;
-            width: 250px;
-            text-align: center;
-            pointer-events: auto;
-            transition: opacity 0.3s;
-        }
-
-        .node-label.book {
-            background: #f97316;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        .node-label.event {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid rgba(0,0,0,0.05);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        .connector-line {
-            position: absolute;
-            width: 2px;
-            background: rgba(0,0,0,0.2);
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .year-marker {
-            position: absolute;
-            top: 40px;
-            font-weight: 800;
-            font-size: 2rem;
-            color: #1e3a8a;
-            opacity: 0.15;
-            pointer-events: none;
-            serif-title;
-        }
-
-        /* Overlay UI */
-        .controls {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 100;
-        }
-
-        .btn-control {
-            width: 50px;
-            height: 50px;
-            background: white;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            color: #1e3a8a;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-control:hover {
-            background: #f0f0f0;
-            transform: scale(1.05);
+        /* Animazioni */
+        .animate-in { animation: zoomIn 0.3s ease-out; }
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3"
-  }
-}
-</script>
 </head>
 <body>
     <div id="root"></div>
-</body>
-</html>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useMemo } = React;
+
+        // --- DATI PERSONAGGI (Dal tuo App.tsx) ---
+        const personaggi = [
+            { nome: 'Adamo', nascita: -4026, morte: -3096, color: '#8b4513', cat: 'patriarca', desc: 'Il primo uomo creato da Dio.' },
+            { nome: 'Eva', nascita: -4026, morte: -3096, color: '#a0522d', cat: 'storico', desc: 'La prima donna, madre di tutti i viventi.' },
+            { nome: 'Caino', nascita: -3900, morte: -3100, color: '#4b5563', cat: 'storico', desc: 'Primo figlio di Adamo ed Eva, agricoltore.' },
+            { nome: 'Abele', nascita: -3898, morte: -3700, color: '#64748b', cat: 'storico', desc: 'Secondo figlio di Adamo, pastore fedele ucciso dal fratello.' },
+            { nome: 'Set', nascita: -3896, morte: -2984, color: '#8c6d31', cat: 'patriarca', desc: 'Figlio di Adamo nato dopo la morte di Abele.' },
+            { nome: 'Enoc', nascita: -3404, morte: -3039, color: '#0ea5e9', cat: 'profeta', desc: 'Camminò con il vero Dio e profetizzò il giudizio.' },
+            { nome: 'Matusalemme', nascita: -3339, morte: -2370, color: '#475569', cat: 'patriarca', desc: 'L\'uomo più longevo menzionato nella Bibbia (969 anni).' },
+            { nome: 'Noè', nascita: -2970, morte: -2020, color: '#4682b4', cat: 'patriarca', desc: 'Costruttore dell\'arca e sopravvissuto al Diluvio.' },
+            { nome: 'Abraamo', nascita: -2018, morte: -1843, color: '#b8860b', cat: 'patriarca', desc: 'Padre di molti popoli e amico di Geova.' },
+            { nome: 'Sara', nascita: -2008, morte: -1881, color: '#be185d', cat: 'storico', desc: 'Moglie di Abraamo e madre di Isacco.' },
+            { nome: 'Ismaele', nascita: -1932, morte: -1795, color: '#7c2d12', cat: 'storico', desc: 'Primo figlio di Abraamo avuto da Agar.' },
+            { nome: 'Isacco', nascita: -1918, morte: -1738, color: '#daa520', cat: 'patriarca', desc: 'Figlio della promessa, padre di Giacobbe ed Esaù.' },
+            { nome: 'Giacobbe', nascita: -1858, morte: -1711, color: '#cd853f', cat: 'patriarca', desc: 'Padre delle 12 tribù d\'Israele.' },
+            { nome: 'Giuseppe', nascita: -1767, morte: -1657, color: '#d2691e', cat: 'storico', desc: 'Venduto in Egitto, divenne primo ministro del Faraone.' },
+            { nome: 'Mosè', nascita: -1593, morte: -1473, color: '#2f4f4f', cat: 'profeta', desc: 'Liberatore d\'Israele e mediatore della Legge.' },
+            { nome: 'Aronne', nascita: -1597, morte: -1474, color: '#708090', cat: 'sacerdote', desc: 'Primo Sommo Sacerdote d\'Israele.' },
+            { nome: 'Miriam', nascita: -1600, morte: -1474, color: '#9d174d', cat: 'storico', desc: 'Sorella di Mosè e Aronne, profetessa in Israele.' },
+            { nome: 'Giosuè', nascita: -1550, morte: -1440, color: '#556b2f', cat: 'giudice', desc: 'Successore di Mosè, guidò Israele in Canaan.' },
+            { nome: 'Sansone', nascita: -1150, morte: -1070, color: '#a0522d', cat: 'giudice', desc: 'Uomo dalla forza prodigiosa donata da Dio.' },
+            { nome: 'Samuele', nascita: -1150, morte: -1078, color: '#483d8b', cat: 'profeta', desc: 'Ultimo dei giudici e primo dei grandi profeti.' },
+            { nome: 'Davide', nascita: -1107, morte: -1037, color: '#c5a059', cat: 're', desc: 'Il re pastore, autore di molti Salmi e antenato del Messia.' },
+            { nome: 'Salomone', nascita: -1050, morte: -998, color: '#daa520', cat: 're', desc: 'Il re più saggio, costruttore del Tempio di Gerusalemme.' },
+            { nome: 'Giosia', nascita: -667, morte: -629, color: '#483d8b', cat: 're', desc: 'Giovane re che restaurò la pura adorazione in Giuda.' },
+            { nome: 'Elia', nascita: -910, morte: -850, color: '#ff4500', cat: 'profeta', desc: 'Profeta zelante che sfidò l\'adorazione di Baal.' },
+            { nome: 'Daniele', nascita: -630, morte: -530, color: '#8a2be2', cat: 'profeta', desc: 'Fedele a Babilonia, interprete di sogni e visioni divine.' },
+            { nome: 'Gesù', nascita: -2, morte: 33, color: '#800000', cat: 're', desc: 'Il Figlio di Dio, Messia promesso e Salvatore.' },
+            { nome: 'Pietro', nascita: 1, morte: 67, color: '#4682b4', cat: 'apostolo', desc: 'L\'apostolo Simone detto Pietro, pilastro della congregazione.' },
+            { nome: 'Paolo', nascita: 5, morte: 65, color: '#4b0082', cat: 'apostolo', desc: 'Saulo di Tarso, l\'apostolo delle nazioni e scrittore biblico.' },
+            { nome: 'Giovanni', nascita: 6, morte: 100, color: '#008b8b', cat: 'apostolo', desc: 'L\'apostolo amato, autore del quarto Vangelo e di Rivelazione.' },
+            { nome: 'Maria', nascita: -18, morte: 45, color: '#be185d', cat: 'storico', desc: 'Madre terrena di Gesù.' },
+            { nome: 'Stefano', nascita: 5, morte: 34, color: '#cd5c5c', cat: 'storico', desc: 'Il primo martire cristiano per la fede in Gesù.' },
+        ];
+
+        // --- DATI EVENTI (Dal tuo data.ts) ---
+        const timelineData = [
+            { id: 'b-gen', data: '1513', era: 'a.E.V.', anno: 1513, avvenimento: 'Stesura di Genesi', tipo: 'libro', autore: 'Mosè' },
+            { id: 'b-exo', data: '1512', era: 'a.E.V.', anno: 1512, avvenimento: 'Stesura di Esodo', tipo: 'libro', autore: 'Mosè' },
+            { id: 'b-lev', data: '1512', era: 'a.E.V.', anno: 1512, avvenimento: 'Stesura di Levitico', tipo: 'libro', autore: 'Mosè' },
+            { id: 'b-num', data: '1473', era: 'a.E.V.', anno: 1473, avvenimento: 'Stesura di Numeri', tipo: 'libro', autore: 'Mosè' },
+            { id: 'b-deu', data: '1473', era: 'a.E.V.', anno: 1473, avvenimento: 'Stesura di Deuteronomio', tipo: 'libro', autore: 'Mosè' },
+            { id: 'b-job', data: '1473', era: 'a.E.V.', anno: 1473, avvenimento: 'Stesura di Giobbe', tipo: 'libro', autore: 'Mosè' },
+            { id: 'b-jos', data: '1450', era: 'a.E.V.', anno: 1450, avvenimento: 'Stesura di Giosuè', tipo: 'libro', autore: 'Giosuè' },
+            { id: 'b-jud', data: '1100', era: 'a.E.V.', anno: 1100, avvenimento: 'Stesura di Giudici', tipo: 'libro', autore: 'Samuele' },
+            { id: 'b-rut', data: '1090', era: 'a.E.V.', anno: 1090, avvenimento: 'Stesura di Rut', tipo: 'libro', autore: 'Samuele' },
+            { id: 'b-1sa', data: '1078', era: 'a.E.V.', anno: 1078, avvenimento: 'Stesura di 1 Samuele', tipo: 'libro', autore: 'Samuele, Gad, Natan' },
+            { id: 'b-2sa', data: '1040', era: 'a.E.V.', anno: 1040, avvenimento: 'Stesura di 2 Samuele', tipo: 'libro', autore: 'Gad, Natan' },
+            { id: 'b-son', data: '1020', era: 'a.E.V.', anno: 1020, avvenimento: 'Stesura del Cantico dei Cantici', tipo: 'libro', autore: 'Salomone' },
+            { id: 'b-ecc', data: '1000', era: 'a.E.V.', anno: 1000, avvenimento: 'Stesura di Ecclesiaste', tipo: 'libro', autore: 'Salomone' },
+            { id: 'b-jon', data: '844', era: 'a.E.V.', anno: 844, avvenimento: 'Stesura di Giona', tipo: 'libro', autore: 'Giona' },
+            { id: 'b-joe', data: '820', era: 'a.E.V.', anno: 820, avvenimento: 'Stesura di Gioele', tipo: 'libro', autore: 'Gioele' },
+            { id: 'b-amo', data: '804', era: 'a.E.V.', anno: 804, avvenimento: 'Stesura di Amos', tipo: 'libro', autore: 'Amos' },
+            { id: 'b-hos', data: '745', era: 'a.E.V.', anno: 745, avvenimento: 'Stesura di Osea', tipo: 'libro', autore: 'Osea' },
+            { id: 'b-isa', data: '732', era: 'a.E.V.', anno: 732, avvenimento: 'Stesura di Isaia', tipo: 'libro', autore: 'Isaia' },
+            { id: 'b-mic', data: '717', era: 'a.E.V.', anno: 717, avvenimento: 'Stesura di Michea', tipo: 'libro', autore: 'Michea' },
+            { id: 'b-pro', data: '717', era: 'a.E.V.', anno: 717, avvenimento: 'Stesura di Proverbi', tipo: 'libro', autore: 'Salomone, Agur, Lemuel' },
+            { id: 'b-zeph', data: '648', era: 'a.E.V.', anno: 648, avvenimento: 'Stesura di Sofonia', tipo: 'libro', autore: 'Sofonia' },
+            { id: 'b-nah', data: '632', era: 'a.E.V.', anno: 632, avvenimento: 'Stesura di Naum', tipo: 'libro', autore: 'Naum' },
+            { id: 'b-hab', data: '628', era: 'a.E.V.', anno: 628, avvenimento: 'Stesura di Abacuc', tipo: 'libro', autore: 'Abacuc' },
+            { id: 'b-obad', data: '607', era: 'a.E.V.', anno: 607, avvenimento: 'Stesura di Abdia', tipo: 'libro', autore: 'Abdia' },
+            { id: 'b-lam', data: '607', era: 'a.E.V.', anno: 607, avvenimento: 'Stesura di Lamentazioni', tipo: 'libro', autore: 'Geremia' },
+            { id: 'b-eze', data: '591', era: 'a.E.V.', anno: 591, avvenimento: 'Stesura di Ezechiele', tipo: 'libro', autore: 'Ezechiele' },
+            { id: 'b-1ki', data: '580', era: 'a.E.V.', anno: 580, avvenimento: 'Stesura di 1 e 2 Re', tipo: 'libro', autore: 'Geremia' },
+            { id: 'b-dan', data: '536', era: 'a.E.V.', anno: 536, avvenimento: 'Stesura di Daniele', tipo: 'libro', autore: 'Daniele' },
+            { id: 'b-hag', data: '520', era: 'a.E.V.', anno: 520, avvenimento: 'Stesura di Aggeo', tipo: 'libro', autore: 'Aggeo' },
+            { id: 'b-zec', data: '518', era: 'a.E.V.', anno: 518, avvenimento: 'Stesura di Zaccaria', tipo: 'libro', autore: 'Zaccaria' },
+            { id: 'b-est', data: '475', era: 'a.E.V.', anno: 475, avvenimento: 'Stesura di Ester', tipo: 'libro', autore: 'Mardocheo' },
+            { id: 'b-ezr', data: '460', era: 'a.E.V.', anno: 460, avvenimento: 'Stesura di Esdra', tipo: 'libro', autore: 'Esdra' },
+            { id: 'b-1ch', data: '460', era: 'a.E.V.', anno: 460, avvenimento: 'Stesura di 1 e 2 Cronache', tipo: 'libro', autore: 'Esdra' },
+            { id: 'b-psa', data: '460', era: 'a.E.V.', anno: 460, avvenimento: 'Stesura di Salmi', tipo: 'libro', autore: 'Davide, Mosè, figli di Core, ecc.' },
+            { id: 'b-neh', data: '443', era: 'a.E.V.', anno: 443, avvenimento: 'Stesura di Neemia', tipo: 'libro', autore: 'Neemia' },
+            { id: 'b-mal', data: '443', era: 'a.E.V.', anno: 443, avvenimento: 'Stesura di Malachia', tipo: 'libro', autore: 'Malachia' },
+            { id: 'b-mat', data: '41', era: 'E.V.', anno: 41, avvenimento: 'Vangelo di Matteo', tipo: 'libro', autore: 'Matteo' },
+            { id: 'b-rev', data: '96', era: 'E.V.', anno: 96, avvenimento: 'Rivelazione (Apocalisse)', tipo: 'libro', autore: 'Giovanni' },
+            { id: 'ev1', data: '4026', era: 'a.E.V.', anno: 4026, avvenimento: 'Creazione di Adamo' },
+            { id: 'ev3', data: '2370', era: 'a.E.V.', anno: 2370, avvenimento: 'Inizio del Diluvio universale' },
+            { id: 'ev5', data: '1943', era: 'a.E.V.', anno: 1943, avvenimento: 'Patto Abraamico' },
+            { id: 'ev9', data: '1513', era: 'a.E.V.', anno: 1513, avvenimento: 'Esodo dall’Egitto' },
+            { id: 'ev13', data: '1070', era: 'a.E.V.', anno: 1070, avvenimento: 'Davide diventa re' },
+            { id: 'ev18', data: '607', era: 'a.E.V.', anno: 607, avvenimento: 'Distruzione di Gerusalemme' },
+            { id: 'ev24', data: '2', era: 'a.E.V.', anno: 2, avvenimento: 'Nascita di Gesù' },
+            { id: 'ev33', data: '33', era: 'E.V.', anno: 33, avvenimento: 'Morte e Risurrezione di Gesù' }
+        ];
+
+        const getIcon = (cat) => {
+            switch (cat) {
+                case 're': return 'fa-crown';
+                case 'sacerdote': return 'fa-fire-alt';
+                case 'profeta': return 'fa-scroll';
+                case 'patriarca': return 'fa-staff-snake';
+                case 'giudice': return 'fa-balance-scale';
+                case 'apostolo': return 'fa-map-location-dot';
+                default: return 'fa-user-group';
+            }
+        };
+
+        const App = () => {
+            const [transform, setTransform] = useState({ x: 100, y: 0, scale: 0.4 });
+            const [selectedPerson, setSelectedPerson] = useState(null);
+            const isDragging = useRef(false);
+            const lastMousePos = useRef({ x: 0, y: 0 });
+
+            const { processedEvents, xMap, sortedYears } = useMemo(() => {
+                const yearsSet = new Set();
+                for (let y = -4100; y <= 200; y += 100) yearsSet.add(y);
+                timelineData.forEach(e => yearsSet.add(e.era === 'a.E.V.' ? -e.anno : e.anno));
+                personaggi.forEach(p => { yearsSet.add(p.nascita); yearsSet.add(p.morte); });
+                const sorted = Array.from(yearsSet).sort((a, b) => a - b);
+                
+                let currentX = 0;
+                const yearToX = {};
+                sorted.forEach((y, i) => {
+                    if (i > 0) {
+                        const gap = (y - sorted[i-1]) * 35;
+                        currentX += Math.max(gap, 600);
+                    }
+                    yearToX[y] = currentX;
+                });
+
+                const getX = (y) => {
+                    if (yearToX[y] !== undefined) return yearToX[y];
+                    const keys = sorted;
+                    for (let i = 0; i < keys.length - 1; i++) {
+                        if (y >= keys[i] && y <= keys[i+1]) {
+                            const ratio = (y - keys[i]) / (keys[i+1] - keys[i]);
+                            return yearToX[keys[i]] + ratio * (yearToX[keys[i+1]] - yearToX[keys[i]]);
+                        }
+                    }
+                    return 0;
+                };
+
+                const eventsAtX = {};
+                const events = timelineData.map(ev => {
+                    const x = getX(ev.era === 'a.E.V.' ? -ev.anno : ev.anno);
+                    eventsAtX[x] = (eventsAtX[x] || 0) + 1;
+                    const y = ev.tipo === 'libro' ? -700 - (eventsAtX[x] * 200) : -250 - (eventsAtX[x] * 140);
+                    return { ...ev, x, y };
+                });
+
+                return { processedEvents: events, xMap: getX, sortedYears: sorted };
+            }, []);
+
+            const getStickyX = (sx, ex, nome) => {
+                const vLeft = -transform.x / transform.scale;
+                const labelW = (100 + nome.length * 10) / transform.scale;
+                return Math.max(0, Math.min(vLeft - sx + 20/transform.scale, (ex - sx) - labelW));
+            };
+
+            const handleMouseDown = (e) => {
+                isDragging.current = true;
+                lastMousePos.current = { x: e.clientX, y: e.clientY };
+            };
+
+            const handleMouseMove = (e) => {
+                if (!isDragging.current) return;
+                setTransform(p => ({ 
+                    ...p, 
+                    x: p.x + (e.clientX - lastMousePos.current
